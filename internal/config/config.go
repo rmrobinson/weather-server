@@ -29,6 +29,7 @@ type InfluxConfig struct {
 	URL                    string `yaml:"url"`
 	Token                  string `yaml:"-"` // set from INFLUX_TOKEN env var only; never read from config file
 	Org                    string `yaml:"org"`
+	OrgID                  string `yaml:"org_id"` // optional; avoids requiring read:orgs token permission
 	BucketRaw              string `yaml:"bucket_raw"`
 	BucketRawRetentionDays int    `yaml:"bucket_raw_retention_days"`
 	Bucket1h               string `yaml:"bucket_1h"`

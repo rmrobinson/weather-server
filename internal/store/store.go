@@ -86,14 +86,28 @@ func (s *Store) Bootstrap(ctx context.Context) error {
 	return s.ensureFluxTasks(ctx)
 }
 
+// resolveOrgID returns the org ID without requiring read:orgs permission when
+// org_id is set in config. Falls back to FindOrganizationByName otherwise.
+func (s *Store) resolveOrgID(ctx context.Context) (string, error) {
+	if s.cfg.OrgID != "" {
+		return s.cfg.OrgID, nil
+	}
+	org, err := s.client.OrganizationsAPI().FindOrganizationByName(ctx, s.cfg.Org)
+	if err != nil {
+		return "", fmt.Errorf("find org %q: %w (set influx.org_id in config to avoid requiring read:orgs permission)", s.cfg.Org, err)
+	}
+	return *org.Id, nil
+}
+
 func (s *Store) ensureBucket(ctx context.Context, name string, retention time.Duration) error {
 	if _, err := s.bucketsAPI.FindBucketByName(ctx, name); err == nil {
 		return nil // already exists
 	}
-	org, err := s.client.OrganizationsAPI().FindOrganizationByName(ctx, s.cfg.Org)
+	orgID, err := s.resolveOrgID(ctx)
 	if err != nil {
-		return fmt.Errorf("find org: %w", err)
+		return err
 	}
+	org := &domain.Organization{Id: &orgID}
 	var rules []domain.RetentionRule
 	if retention > 0 {
 		ruleType := domain.RetentionRuleTypeExpire
@@ -124,9 +138,9 @@ var taskSchedule = map[string]string{
 }
 
 func (s *Store) ensureFluxTasks(ctx context.Context) error {
-	org, err := s.client.OrganizationsAPI().FindOrganizationByName(ctx, s.cfg.Org)
+	orgID, err := s.resolveOrgID(ctx)
 	if err != nil {
-		return fmt.Errorf("find org: %w", err)
+		return err
 	}
 	return fs.WalkDir(fluxFS, "flux", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".flux") {
@@ -155,7 +169,7 @@ func (s *Store) ensureFluxTasks(ctx context.Context) error {
 			`{{bucket_1h}}`, s.cfg.Bucket1h,
 			`{{bucket_1d}}`, s.cfg.Bucket1d,
 		).Replace(string(data))
-		_, err = s.tasksAPI.CreateTaskWithEvery(ctx, taskName, script, every, *org.Id)
+		_, err = s.tasksAPI.CreateTaskWithEvery(ctx, taskName, script, every, orgID)
 		if err != nil {
 			return fmt.Errorf("create task %s: %w", taskName, err)
 		}

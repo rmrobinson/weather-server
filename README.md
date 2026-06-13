@@ -22,23 +22,35 @@ Ingests Ecowitt WS90 / GW2000 sensor data over MQTT, stores it in InfluxDB v2 wi
 cp config.yaml.example config.yaml
 ```
 
-Edit `config.yaml` with your MQTT broker address, InfluxDB URL, and org name.
+Edit `config.yaml` with your MQTT broker address, InfluxDB URL, org name, and org ID.
 The InfluxDB token is **not** stored in the config file — it is read from the
 `INFLUX_TOKEN` environment variable at runtime (see step 3).
 
+**Find your org ID:**
+
+```bash
+influx org list
+# ID                    Name
+# db0874614fb9e07b      your-org-name
+```
+
+Set `influx.org_id` in `config.yaml` to the ID shown above. This lets the server
+create buckets and Flux tasks on first run without requiring the `read:orgs`
+token permission.
+
 ### 2. Create an InfluxDB API token
 
-The server needs write access to `weather_raw` and read access to all three
-weather buckets, plus read access to tasks (for the `/healthz` task health checks).
+On first run the server creates the InfluxDB buckets and Flux downsampling tasks
+automatically. The token needs permission to create buckets and tasks, plus read
+access for the `/healthz` health checks.
 
 **Option A — InfluxDB UI**
 
 1. Open your InfluxDB instance → **Load Data → API Tokens → Generate API Token**
 2. Choose **Custom API Token**
 3. Grant the following permissions for your org:
-   - Buckets: **Read** + **Write** on `weather_raw`
-   - Buckets: **Read** on `weather_1h`, `weather_1d`
-   - Tasks: **Read**
+   - Buckets: **Read** + **Write** (select **All Buckets** — required to create new buckets)
+   - Tasks: **Read** + **Write**
 4. Copy the generated token
 
 **Option B — InfluxDB CLI**
@@ -46,30 +58,29 @@ weather buckets, plus read access to tasks (for the `/healthz` task health check
 ```bash
 influx auth create \
   --org your-org-name \
-  --description "weather-server" \
-  --read-bucket weather_raw \
-  --write-bucket weather_raw \
-  --read-bucket weather_1h \
-  --read-bucket weather_1d
+  --description "weatherd" \
+  --read-buckets \
+  --write-buckets \
+  --read-tasks \
+  --write-tasks
 ```
 
-> **Note:** Run `store.Bootstrap()` once with an all-access token to create the
-> buckets and Flux downsampling tasks. Once they exist you can switch to the
-> restricted token above. Bootstrap warns and continues if it lacks permissions —
-> normal operation is unaffected.
+> `--read-buckets` / `--write-buckets` grant org-wide bucket access, which is
+> needed to create the three weather buckets on first run. If you set `org_id` in
+> `config.yaml`, no `--read-orgs` permission is needed.
 
 ### 3. Run
 
 ```bash
 export INFLUX_TOKEN='your-token-here'
-go run ./cmd/weather-server/ -config ./config.yaml
+go run ./cmd/weatherd/ --config ./config.yaml
 ```
 
 Or build first:
 
 ```bash
-go build -o weather-server ./cmd/weather-server/
-INFLUX_TOKEN='your-token-here' ./weather-server -config ./config.yaml
+go build -o weatherd ./cmd/weatherd/
+INFLUX_TOKEN='your-token-here' ./weatherd --config ./config.yaml
 ```
 
 The server will:

@@ -13,6 +13,9 @@ mqtt:
 influx:
   url: http://localhost:8086
   org: your-org-name
+  # org_id is optional but recommended: avoids requiring read:orgs token permission.
+  # Find it with: influx org list
+  org_id: ""
   bucket_raw: weather_raw
   bucket_raw_retention_days: 120
   bucket_1h: weather_1h
