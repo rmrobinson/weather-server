@@ -41,34 +41,85 @@ token permission.
 ### 2. Create an InfluxDB API token
 
 On first run the server creates the InfluxDB buckets and Flux downsampling tasks
-automatically. The token needs permission to create buckets and tasks, plus read
-access for the `/healthz` health checks.
+automatically. The token needs two distinct classes of permission:
+
+- **Bucket management** (resource-level) — to list and create the three buckets on startup
+- **Bucket data** (per-bucket) — to write incoming readings, query historical data, and
+  allow the hourly/daily downsampling tasks to read from one bucket and write to another.
+  The tasks run under this same token, so missing write access to `weather_1h` or
+  `weather_1d` will cause them to fail silently with "not authorized to write".
+- **Tasks** — to create and health-check the downsampling tasks
+
+The full set of required permissions:
+
+| Resource | Permission | Why |
+|---|---|---|
+| Buckets (all, resource-level) | Read | `FindBucketByName` on startup |
+| Buckets (all, resource-level) | Write | `CreateBucketWithName` on first run |
+| `weather_raw` data | Read | Historical queries, `QueryLatest`, rain accumulation |
+| `weather_raw` data | Write | Persist incoming MQTT readings |
+| `weather_1h` data | Read | 7d / 30d chart queries; input for `downsample_1d` task |
+| `weather_1h` data | Write | Output of `downsample_1h` task |
+| `weather_1d` data | Read | 1-year chart queries |
+| `weather_1d` data | Write | Output of `downsample_1d` task |
+| Tasks | Read | Health checks (`/healthz`), task existence check on startup |
+| Tasks | Write | Create downsampling tasks on first run |
+
+> If `influx.org_id` is set in `config.yaml` (recommended), the server never calls
+> `FindOrganizationByName`, so Organizations Read is not required.
 
 **Option A — InfluxDB UI**
 
 1. Open your InfluxDB instance → **Load Data → API Tokens → Generate API Token**
 2. Choose **Custom API Token**
-3. Grant the following permissions for your org:
-   - Organizations: **Read** (required to look up the org by name at startup)
-   - Buckets: **Read** + **Write** (select **All Buckets** — required to create new buckets)
-   - Tasks: **Read** + **Write**
+3. Grant the following:
+   - **Buckets** (resource): **Read** + **Write** — enables bucket listing and creation
+   - **`weather_raw`**: **Read** + **Write**
+   - **`weather_1h`**: **Read** + **Write**
+   - **`weather_1d`**: **Read** + **Write**
+   - **Tasks**: **Read** + **Write**
 4. Copy the generated token
 
+Note: the three named buckets only appear in the picker after they have been created.
+On a fresh install, grant **All Buckets: Read + Write** for the data rows above — you can
+narrow it to the three named buckets after the server has run once and created them.
+
 **Option B — InfluxDB CLI**
+
+After the server has run once and created the buckets, look up their IDs:
+
+```bash
+influx bucket list --org your-org-name --token your-token
+# ID                    Name            ...
+# a1b2c3d4e5f60001      weather_raw
+# a1b2c3d4e5f60002      weather_1h
+# a1b2c3d4e5f60003      weather_1d
+```
+
+Then create the token with explicit per-bucket data permissions:
 
 ```bash
 influx auth create \
   --org your-org-name \
-  --description "weather" \
-  --read-orgs \
+  --user your-username \
+  --description "weather-server" \
   --read-buckets \
   --write-buckets \
+  --read-bucket a1b2c3d4e5f60001 \
+  --write-bucket a1b2c3d4e5f60001 \
+  --read-bucket a1b2c3d4e5f60002 \
+  --write-bucket a1b2c3d4e5f60002 \
+  --read-bucket a1b2c3d4e5f60003 \
+  --write-bucket a1b2c3d4e5f60003 \
   --read-tasks \
   --write-tasks
 ```
 
-> If you set `org_id` in `config.yaml` you can omit `--read-orgs` / Organizations Read,
-> as the server will use the ID directly instead of looking up the org by name.
+Replace the IDs with the actual values from `influx bucket list`.
+
+> `--read-buckets` / `--write-buckets` grant resource-level bucket management only
+> (list, create, delete). They do **not** grant data read/write — that requires the
+> per-bucket `--read-bucket` / `--write-bucket` flags shown above.
 
 ### 3. Run
 

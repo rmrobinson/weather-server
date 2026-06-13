@@ -199,6 +199,9 @@ function loadChart() {
     fields: field,
   });
 
+  chart.options.scales.x.min = start.getTime();
+  chart.options.scales.x.max = end.getTime();
+
   fetch(`/api/v1/readings?${params}`)
     .then(r => r.ok ? r.json() : [])
     .then(data => {
