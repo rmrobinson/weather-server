@@ -36,6 +36,7 @@
       background: #f9f9f9; border-radius: 6px; padding: 0.5rem 0.75rem;
       text-align: center;
     }
+    .card.derived { background: #f0f4ff; }
     .card .label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: .05em; }
     .card .value { font-size: 1.4rem; font-weight: 700; margin-top: 0.1rem; }
     .card .unit  { font-size: 0.7rem; color: #888; }
@@ -79,7 +80,7 @@
     <div id="condition-banner" style="font-size:1.15rem;font-weight:700;text-align:center;padding:0.45rem 0.75rem;background:#e3f2fd;border-radius:6px;margin-bottom:0.75rem;color:#0d47a1;">—</div>
     <div class="card-grid">
       <div class="card"><div class="label">Temperature</div><div class="value" id="val-temp">—</div><div class="unit">°C</div></div>
-      <div class="card"><div class="label">Feels Like</div><div class="value" id="val-feels-like">—</div><div class="unit">°C</div></div>
+      <div class="card derived"><div class="label">Feels Like</div><div class="value" id="val-feels-like">—</div><div class="unit">°C</div></div>
       <div class="card"><div class="label">Humidity</div><div class="value" id="val-humidity">—</div><div class="unit">%</div></div>
       <div class="card"><div class="label">Pressure</div><div class="value" id="val-pressure">—</div><div class="unit">hPa</div></div>
       <div class="card"><div class="label">Wind Speed</div><div class="value" id="val-wind">—</div><div class="unit">m/s</div></div>
@@ -90,8 +91,8 @@
       <div class="card"><div class="label">Solar</div><div class="value" id="val-solar">—</div><div class="unit">W/m²</div></div>
       <div class="card"><div class="label">Indoor Temp</div><div class="value" id="val-temp-in">—</div><div class="unit">°C</div></div>
       <div class="card"><div class="label">Indoor Humidity</div><div class="value" id="val-humidity-in">—</div><div class="unit">%</div></div>
-      <div class="card"><div class="label">Dew Point</div><div class="value" id="val-dew">—</div><div class="unit">°C</div></div>
-      <div class="card"><div class="label">Cloud Cover</div><div class="value" id="val-cloud">—</div><div class="unit">%</div></div>
+      <div class="card derived"><div class="label">Dew Point</div><div class="value" id="val-dew">—</div><div class="unit">°C</div></div>
+      <div class="card derived"><div class="label">Cloud Cover</div><div class="value" id="val-cloud">—</div><div class="unit">%</div></div>
     </div>
     <div id="last-updated">Last updated: —</div>
   </section>
