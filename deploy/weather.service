@@ -12,9 +12,9 @@ WorkingDirectory=/etc/weather
 # Secrets and runtime config — create /etc/weather/environment and populate:
 #   INFLUX_TOKEN=<your-influxdb-api-token>
 #   WEATHER_PSK=<your-psk-or-leave-absent-to-disable-auth>
-EnvironmentFile=/etc/weather/environment
+EnvironmentFile=/etc/weather/weather.env
 
-ExecStart=/usr/local/bin/weather --config /etc/weather/config.yaml
+ExecStart=/opt/weather/weather --config /etc/weather/config.yaml
 
 Restart=on-failure
 RestartSec=5
