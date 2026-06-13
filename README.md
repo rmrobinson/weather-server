@@ -80,8 +80,8 @@ go run ./cmd/weatherd/ --config ./config.yaml
 Or build first:
 
 ```bash
-go build -o weather ./cmd/weatherd/
-INFLUX_TOKEN='your-token-here' ./weather --config ./config.yaml
+go build -o weatherd ./cmd/weatherd/
+INFLUX_TOKEN='your-token-here' ./weatherd --config ./config.yaml
 ```
 
 The server will:
@@ -118,6 +118,54 @@ grpcurl -plaintext -d '{
 ```
 
 If a PSK is configured, add `-H 'authorization: psk <your-secret>'` to all gRPC calls and set `Authorization: psk <your-secret>` on HTTP requests.
+
+## Systemd deployment
+
+`deploy/install.sh` automates the full installation as a systemd service.
+
+```bash
+# Build and install in one step (requires Go on the target machine)
+sudo ./deploy/install.sh --build
+
+# Or install a binary you built elsewhere
+sudo ./deploy/install.sh --binary ./weatherd
+```
+
+The script:
+1. Creates a `weatherd` system user and group
+2. Installs the binary to `/opt/weatherd/weatherd`
+3. Installs the service unit to `/etc/systemd/system/weatherd.service`
+4. Copies `config.yaml.example` → `/etc/weatherd/config.yaml` (only on first run)
+5. Copies `weatherd.env.example` → `/etc/weatherd/weatherd.env` (only on first run)
+6. Enables and starts the service
+
+**After installation**, before starting the service, edit the two files it installed:
+
+```bash
+# Set your station details, coordinates, MQTT broker, and InfluxDB connection
+sudo editor /etc/weatherd/config.yaml
+
+# Set the InfluxDB token (and optionally a PSK)
+sudo editor /etc/weatherd/weatherd.env
+```
+
+Then start (or restart if already running):
+
+```bash
+sudo systemctl enable --now weatherd   # first time
+sudo systemctl restart weatherd        # after config changes
+sudo journalctl -u weatherd -f         # follow logs
+```
+
+Pass `--no-start` to install files without starting the service — useful when
+you want to edit config before the first run:
+
+```bash
+sudo ./deploy/install.sh --build --no-start
+sudo editor /etc/weatherd/config.yaml
+sudo editor /etc/weatherd/weatherd.env
+sudo systemctl enable --now weatherd
+```
 
 ## Docker
 

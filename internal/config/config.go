@@ -78,6 +78,12 @@ func (c *Config) validate() error {
 	if c.StationID == "" {
 		errs = append(errs, "station_id is required")
 	}
+	if c.Latitude < -90 || c.Latitude > 90 {
+		errs = append(errs, "latitude must be between -90 and 90")
+	}
+	if c.Longitude < -180 || c.Longitude > 180 {
+		errs = append(errs, "longitude must be between -180 and 180")
+	}
 	if c.MQTT.Broker == "" {
 		errs = append(errs, "mqtt.broker is required")
 	}
