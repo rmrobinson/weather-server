@@ -125,13 +125,13 @@ Replace the IDs with the actual values from `influx bucket list`.
 
 ```bash
 export INFLUX_TOKEN='your-token-here'
-go run ./cmd/weatherd/ --config ./config.yaml
+go run ./cmd/weather/ --config ./config.yaml
 ```
 
 Or build first:
 
 ```bash
-go build -o weatherd ./cmd/weatherd/
+go build -o weatherd ./cmd/weather/
 INFLUX_TOKEN='your-token-here' ./weatherd --config ./config.yaml
 ```
 

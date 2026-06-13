@@ -21,7 +21,7 @@ usage() {
   printf '\n'
   printf 'Options:\n'
   printf '  --binary PATH       Install this prebuilt binary as /opt/weatherd/weatherd.\n'
-  printf '  --build             Build ./cmd/weatherd with go and install the result.\n'
+  printf '  --build             Build ./cmd/weather with go and install the result.\n'
   printf '  --no-start          Install files but do not enable or restart the service.\n'
   printf '  --overwrite-config  Replace /etc/weatherd/config.yaml with deploy/config.yaml.example.\n'
 }
@@ -84,13 +84,15 @@ trap cleanup EXIT
 if [ "$BUILD_BINARY" -eq 1 ]; then
   TMP_BINARY="$(mktemp "/tmp/weatherd.XXXXXX")"
   echo "building $APP_NAME from $REPO_ROOT"
-  (cd "$REPO_ROOT" && go build -o "$TMP_BINARY" ./cmd/weatherd)
+  (cd "$REPO_ROOT" && go build -o "$TMP_BINARY" ./cmd/weather)
   BINARY_SOURCE="$TMP_BINARY"
 elif [ -z "$BINARY_SOURCE" ]; then
   if [ -x "$REPO_ROOT/weatherd" ]; then
     BINARY_SOURCE="$REPO_ROOT/weatherd"
+  elif [ -x "$REPO_ROOT/weather" ]; then
+    BINARY_SOURCE="$REPO_ROOT/weather"
   else
-    echo "no binary found. Run 'go build -o weatherd ./cmd/weatherd' first, or use --build, or pass --binary PATH" >&2
+    echo "no binary found. Run 'go build -o weatherd ./cmd/weather' first, or use --build, or pass --binary PATH" >&2
     exit 1
   fi
 fi
