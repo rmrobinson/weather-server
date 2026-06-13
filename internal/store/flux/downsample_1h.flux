@@ -1,0 +1,5 @@
+from(bucket: "{{bucket_raw}}")
+  |> range(start: -3h)
+  |> filter(fn: (r) => r._measurement == "weather")
+  |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
+  |> to(bucket: "{{bucket_1h}}")

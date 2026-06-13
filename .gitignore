@@ -1,0 +1,8 @@
+# Local deployment config — copy config.yaml.example and fill in your values
+config.yaml
+
+# Build output
+/weather-server
+
+# macOS
+.DS_Store

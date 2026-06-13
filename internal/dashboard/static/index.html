@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Station</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; }
+
+    #status-bar {
+      display: flex; align-items: center; gap: 1.2rem;
+      background: #222; color: #eee;
+      padding: 0.5rem 1rem; font-size: 0.82rem;
+    }
+    .status-item { display: flex; align-items: center; gap: 0.35rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #4caf50; }
+    .dot.fail { background: #f44336; }
+
+    #alert-banner {
+      display: none; background: #c62828; color: #fff;
+      padding: 0.5rem 1rem; font-weight: 600; font-size: 0.9rem;
+    }
+
+    main { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; padding: 1rem; }
+
+    #conditions-panel {
+      background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 4px #0001;
+    }
+    #conditions-panel h2 { font-size: 1rem; margin-bottom: 0.75rem; color: #555; }
+    .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .card {
+      background: #f9f9f9; border-radius: 6px; padding: 0.5rem 0.75rem;
+      text-align: center;
+    }
+    .card .label { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: .05em; }
+    .card .value { font-size: 1.4rem; font-weight: 700; margin-top: 0.1rem; }
+    .card .unit  { font-size: 0.7rem; color: #888; }
+    #last-updated { margin-top: 0.75rem; font-size: 0.72rem; color: #aaa; text-align: center; }
+
+    #chart-panel {
+      background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 4px #0001;
+    }
+    #chart-controls {
+      display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.75rem;
+    }
+    #chart-controls select { padding: 0.3rem 0.5rem; border-radius: 4px; border: 1px solid #ccc; }
+    .range-btn {
+      padding: 0.3rem 0.75rem; border-radius: 4px; border: 1px solid #ccc;
+      background: #f5f5f5; cursor: pointer; font-size: 0.85rem;
+    }
+    .range-btn.active { background: #1976d2; color: #fff; border-color: #1976d2; }
+    #chart-warning {
+      display: none; background: #fff3cd; border: 1px solid #ffc107;
+      color: #856404; padding: 0.3rem 0.6rem; border-radius: 4px;
+      font-size: 0.8rem; margin-bottom: 0.5rem;
+    }
+    #chart-container { position: relative; height: 340px; }
+  </style>
+</head>
+<body>
+
+<div id="status-bar">
+  <strong>Weather Station</strong>
+  <div class="status-item"><span class="dot" id="dot-mqtt"></span> MQTT</div>
+  <div class="status-item"><span class="dot" id="dot-write"></span> Write</div>
+  <div class="status-item"><span class="dot" id="dot-1h"></span> 1h rollup</div>
+  <div class="status-item"><span class="dot" id="dot-1d"></span> Daily rollup</div>
+</div>
+
+<div id="alert-banner">Live data may be unavailable</div>
+
+<main>
+  <section id="conditions-panel">
+    <h2>Current Conditions</h2>
+    <div id="condition-banner" style="font-size:1.15rem;font-weight:700;text-align:center;padding:0.45rem 0.75rem;background:#e3f2fd;border-radius:6px;margin-bottom:0.75rem;color:#0d47a1;">—</div>
+    <div class="card-grid">
+      <div class="card"><div class="label">Temperature</div><div class="value" id="val-temp">—</div><div class="unit">°C</div></div>
+      <div class="card"><div class="label">Feels Like</div><div class="value" id="val-feels-like">—</div><div class="unit">°C</div></div>
+      <div class="card"><div class="label">Humidity</div><div class="value" id="val-humidity">—</div><div class="unit">%</div></div>
+      <div class="card"><div class="label">Pressure</div><div class="value" id="val-pressure">—</div><div class="unit">hPa</div></div>
+      <div class="card"><div class="label">Wind Speed</div><div class="value" id="val-wind">—</div><div class="unit">m/s</div></div>
+      <div class="card"><div class="label">Wind Gust</div><div class="value" id="val-gust">—</div><div class="unit">m/s</div></div>
+      <div class="card"><div class="label">Wind Dir</div><div class="value" id="val-winddir">—</div><div class="unit">°</div></div>
+      <div class="card"><div class="label">Rain Event</div><div class="value" id="val-rain">—</div><div class="unit">mm</div></div>
+      <div class="card"><div class="label">UV Index</div><div class="value" id="val-uv">—</div><div class="unit"></div></div>
+      <div class="card"><div class="label">Solar</div><div class="value" id="val-solar">—</div><div class="unit">W/m²</div></div>
+      <div class="card"><div class="label">Indoor Temp</div><div class="value" id="val-temp-in">—</div><div class="unit">°C</div></div>
+      <div class="card"><div class="label">Indoor Humidity</div><div class="value" id="val-humidity-in">—</div><div class="unit">%</div></div>
+      <div class="card"><div class="label">Dew Point</div><div class="value" id="val-dew">—</div><div class="unit">°C</div></div>
+      <div class="card"><div class="label">Cloud Cover</div><div class="value" id="val-cloud">—</div><div class="unit">%</div></div>
+    </div>
+    <div id="last-updated">Last updated: —</div>
+  </section>
+
+  <section id="chart-panel">
+    <div id="chart-controls">
+      <select id="field-select">
+        <option value="temp_c">Temperature (°C)</option>
+        <option value="feels_like_c">Feels Like (°C)</option>
+        <option value="humidity_pct">Humidity (%)</option>
+        <option value="pressure_hpa">Pressure (hPa)</option>
+        <option value="wind_speed_ms">Wind Speed (m/s)</option>
+        <option value="wind_gust_ms">Wind Gust (m/s)</option>
+        <option value="max_daily_gust_ms">Max Daily Gust (m/s)</option>
+        <option value="wind_dir_deg">Wind Direction (°)</option>
+        <option value="rain_mm_hr">Rain Rate (mm/hr)</option>
+        <option value="rain_event_mm">Rain Event (mm)</option>
+        <option value="rain_hourly_mm">Rain This Hour (mm)</option>
+        <option value="rain_daily_mm">Rain Today (mm)</option>
+        <option value="rain_weekly_mm">Rain This Week (mm)</option>
+        <option value="rain_monthly_mm">Rain This Month (mm)</option>
+        <option value="rain_season_mm">Rain This Season (mm)</option>
+        <option value="rain_yearly_mm">Rain Yearly (mm, cumulative)</option>
+        <option value="uv_index">UV Index</option>
+        <option value="solar_wm2">Solar (W/m²)</option>
+        <option value="temp_in_c">Indoor Temperature (°C)</option>
+        <option value="humidity_in_pct">Indoor Humidity (%)</option>
+        <option value="pressure_abs_hpa">Pressure Absolute (hPa)</option>
+        <option value="battery_v">Battery (V)</option>
+        <option value="capacitor_v">Capacitor (V)</option>
+        <option value="dew_point_c">Dew Point (°C)</option>
+        <option value="clear_sky_wm2">Clear-Sky Solar (W/m²)</option>
+        <option value="clear_sky_index">Clear-Sky Index (Kt)</option>
+        <option value="cloud_cover_pct">Cloud Cover (%)</option>
+      </select>
+      <button class="range-btn active" data-range="1h">Last Hour</button>
+      <button class="range-btn" data-range="24h">Last 24h</button>
+      <button class="range-btn" data-range="7d">Last 7d</button>
+      <button class="range-btn" data-range="30d">Last 30d</button>
+      <button class="range-btn" data-range="1y">Last Year</button>
+    </div>
+    <div id="chart-warning">Data for this time range may be incomplete</div>
+    <div id="chart-container"><canvas id="chart"></canvas></div>
+  </section>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  range: '1h',
+  field: 'temp_c',
+  chartStart: null,
+  chartEnd: null,
+  healthStatus: {},
+};
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+const ctx = document.getElementById('chart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: { labels: [], datasets: [{ label: '', data: [], borderColor: '#1976d2', backgroundColor: 'rgba(25,118,210,0.08)', tension: 0.2, pointRadius: 2 }] },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { type: 'time', adapters: { date: { zone: 'local' } }, ticks: { maxTicksLimit: 8 } },
+      y: { ticks: { maxTicksLimit: 6 } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+
+function rangeToResolution(range) {
+  return { '1h': 'raw', '24h': 'raw', '7d': '1h', '30d': '1h', '1y': '1d' }[range] || 'raw';
+}
+
+const RANGE_SECONDS = { '1h': 3600, '24h': 86400, '7d': 604800, '30d': 2592000, '1y': 31536000 };
+
+function rangeSeconds(range) {
+  return RANGE_SECONDS[range] || 3600;
+}
+
+function rangeToStart(range) {
+  return new Date(Date.now() - rangeSeconds(range) * 1000);
+}
+
+function loadChart() {
+  const field = state.field;
+  const resolution = rangeToResolution(state.range);
+  const start = rangeToStart(state.range);
+  const end = new Date();
+  state.chartStart = start;
+  state.chartEnd = end;
+
+  // Show warning if resolution uses a potentially-degraded bucket
+  const warnEl = document.getElementById('chart-warning');
+  const showWarn = (resolution === '1h' && state.healthStatus['downsample_1h'] === 'fail')
+                || (resolution === '1d' && state.healthStatus['downsample_1d'] === 'fail');
+  warnEl.style.display = showWarn ? 'block' : 'none';
+
+  const params = new URLSearchParams({
+    start: start.toISOString(),
+    end: end.toISOString(),
+    resolution,
+    fields: field,
+  });
+
+  fetch(`/api/v1/readings?${params}`)
+    .then(r => r.ok ? r.json() : [])
+    .then(data => {
+      const rows = data || [];
+      const labels = rows.map(r => new Date(r.timestamp));
+      const values = rows.map(r => r[field]);
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = values;
+      chart.data.datasets[0].label = field;
+      chart.update('none');
+    })
+    .catch(console.error);
+}
+
+// ── Current conditions via SSE ────────────────────────────────────────────────
+// Keys match the JSON tags on types.WeatherReading (snake_case).
+const condMap = {
+  temp_c: 'val-temp', feels_like_c: 'val-feels-like', humidity_pct: 'val-humidity',
+  dew_point_c: 'val-dew',
+  temp_in_c: 'val-temp-in', humidity_in_pct: 'val-humidity-in',
+  pressure_hpa: 'val-pressure',
+  wind_speed_ms: 'val-wind', wind_gust_ms: 'val-gust', wind_dir_deg: 'val-winddir',
+  rain_event_mm: 'val-rain', uv_index: 'val-uv', solar_wm2: 'val-solar',
+  cloud_cover_pct: 'val-cloud'
+};
+
+function connectSSE() {
+  const es = new EventSource('/api/v1/stream/sse');
+  es.onmessage = e => {
+    const r = JSON.parse(e.data);
+    applyReading(r);
+
+    // Append to chart if within the current range's start window.
+    const ts = new Date(r.timestamp);
+    if (state.chartStart && ts >= state.chartStart) {
+      chart.data.labels.push(ts);
+      chart.data.datasets[0].data.push(r[state.field]);
+      // Drop points that have scrolled past the left edge of the window.
+      const cutoff = new Date(Date.now() - rangeSeconds(state.range) * 1000);
+      while (chart.data.labels.length > 0 && chart.data.labels[0] < cutoff) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+      state.chartStart = cutoff;
+      chart.update('none');
+    }
+  };
+  es.onerror = () => {
+    // Close immediately so the browser stops auto-retrying and firing onerror
+    // repeatedly. Without this, each retry spawns another connectSSE() call,
+    // creating an ever-growing pile of concurrent SSE connections.
+    es.close();
+    setTimeout(connectSSE, 5000);
+  };
+}
+
+// ── Health polling ────────────────────────────────────────────────────────────
+function pollHealth() {
+  fetch('/healthz')
+    .then(r => r.json())
+    .then(data => {
+      const checks = data.checks || {};
+      state.healthStatus = {};
+
+      const dotMap = { mqtt: 'dot-mqtt', influx_write: 'dot-write', downsample_1h: 'dot-1h', downsample_1d: 'dot-1d' };
+      let liveDataFail = false;
+
+      for (const [key, dot] of Object.entries(dotMap)) {
+        const ok = checks[key]?.status === 'ok';
+        state.healthStatus[key] = ok ? 'ok' : 'fail';
+        document.getElementById(dot)?.classList.toggle('fail', !ok);
+        if ((key === 'mqtt' || key === 'influx_write') && !ok) liveDataFail = true;
+      }
+
+      document.getElementById('alert-banner').style.display = liveDataFail ? 'block' : 'none';
+    })
+    .catch(console.error);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+document.getElementById('field-select').addEventListener('change', e => {
+  state.field = e.target.value;
+  loadChart();
+});
+
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.range = btn.dataset.range;
+    loadChart();
+  });
+});
+
+// ── Latest reading pre-load ───────────────────────────────────────────────────
+// Fields that need non-default (1) decimal precision.
+const fieldDecimals = {
+  wind_dir_deg: 0, uv_index: 0,
+  battery_v: 2, capacitor_v: 2,
+  clear_sky_index: 2, cloud_cover_pct: 0,
+};
+
+function applyReading(r) {
+  // Condition is a string field — display it in the banner.
+  if (r.condition != null) {
+    const banner = document.getElementById('condition-banner');
+    if (banner) banner.textContent = r.condition || '—';
+  }
+  for (const [field, id] of Object.entries(condMap)) {
+    const el = document.getElementById(id);
+    if (el && r[field] != null) {
+      // -1 is the sentinel for "not computable" (e.g. cloud cover at night).
+      el.textContent = r[field] < 0 ? '—' : r[field].toFixed(fieldDecimals[field] ?? 1);
+    }
+  }
+  if (r.timestamp) {
+    document.getElementById('last-updated').textContent =
+      'Last updated: ' + new Date(r.timestamp).toLocaleTimeString();
+  }
+}
+
+function loadLatest() {
+  fetch('/api/v1/readings/latest')
+    .then(r => r.ok ? r.json() : null)
+    .then(r => { if (r) applyReading(r); })
+    .catch(() => {});
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadLatest();
+connectSSE();
+loadChart();
+pollHealth();
+setInterval(pollHealth, 60_000);
+</script>
+</body>
+</html>

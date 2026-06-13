@@ -1,0 +1,31 @@
+# Required. Identifies this station in InfluxDB; used as the "station" tag on every data point.
+station_id: home
+
+# Required for cloud cover estimation via the solar clear-sky model.
+latitude: 0.0
+longitude: 0.0
+
+mqtt:
+  broker: tcp://localhost:1883
+  topic_prefix: ws90
+  client_id: weather-server
+
+influx:
+  url: http://localhost:8086
+  org: your-org-name
+  bucket_raw: weather_raw
+  bucket_raw_retention_days: 120
+  bucket_1h: weather_1h
+  bucket_1d: weather_1d
+
+grpc:
+  addr: :9090
+
+http:
+  addr: :8080
+
+# Secrets are never read from this file — set them as environment variables:
+#
+#   INFLUX_TOKEN   (required) InfluxDB API token
+#   WEATHER_PSK    (optional) Pre-shared key to require on all API/gRPC endpoints;
+#                  leave unset or empty to disable authentication.
