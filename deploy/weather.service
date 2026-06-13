@@ -5,16 +5,16 @@ Documentation=https://github.com/rmrobinson/weather-server
 
 [Service]
 Type=simple
-User=weatherd
-Group=weatherd
-WorkingDirectory=/etc/weatherd
+User=weather
+Group=weather
+WorkingDirectory=/etc/weather
 
-# Secrets and runtime config — create /etc/weatherd/environment and populate:
+# Secrets and runtime config — create /etc/weather/environment and populate:
 #   INFLUX_TOKEN=<your-influxdb-api-token>
 #   WEATHER_PSK=<your-psk-or-leave-absent-to-disable-auth>
-EnvironmentFile=/etc/weatherd/environment
+EnvironmentFile=/etc/weather/environment
 
-ExecStart=/usr/local/bin/weatherd --config /etc/weatherd/config.yaml
+ExecStart=/usr/local/bin/weather --config /etc/weather/config.yaml
 
 Restart=on-failure
 RestartSec=5

@@ -59,7 +59,7 @@ access for the `/healthz` health checks.
 ```bash
 influx auth create \
   --org your-org-name \
-  --description "weatherd" \
+  --description "weather" \
   --read-orgs \
   --read-buckets \
   --write-buckets \
@@ -74,14 +74,14 @@ influx auth create \
 
 ```bash
 export INFLUX_TOKEN='your-token-here'
-go run ./cmd/weatherd/ --config ./config.yaml
+go run ./cmd/weather/ --config ./config.yaml
 ```
 
 Or build first:
 
 ```bash
-go build -o weatherd ./cmd/weatherd/
-INFLUX_TOKEN='your-token-here' ./weatherd --config ./config.yaml
+go build -o weather ./cmd/weather/
+INFLUX_TOKEN='your-token-here' ./weather --config ./config.yaml
 ```
 
 The server will:
