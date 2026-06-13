@@ -49,6 +49,7 @@ access for the `/healthz` health checks.
 1. Open your InfluxDB instance → **Load Data → API Tokens → Generate API Token**
 2. Choose **Custom API Token**
 3. Grant the following permissions for your org:
+   - Organizations: **Read** (required to look up the org by name at startup)
    - Buckets: **Read** + **Write** (select **All Buckets** — required to create new buckets)
    - Tasks: **Read** + **Write**
 4. Copy the generated token
@@ -59,15 +60,15 @@ access for the `/healthz` health checks.
 influx auth create \
   --org your-org-name \
   --description "weatherd" \
+  --read-orgs \
   --read-buckets \
   --write-buckets \
   --read-tasks \
   --write-tasks
 ```
 
-> `--read-buckets` / `--write-buckets` grant org-wide bucket access, which is
-> needed to create the three weather buckets on first run. If you set `org_id` in
-> `config.yaml`, no `--read-orgs` permission is needed.
+> If you set `org_id` in `config.yaml` you can omit `--read-orgs` / Organizations Read,
+> as the server will use the ID directly instead of looking up the org by name.
 
 ### 3. Run
 
