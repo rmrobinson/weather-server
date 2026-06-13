@@ -87,8 +87,8 @@ func (c *Config) validate() error {
 	if c.Influx.URL == "" {
 		errs = append(errs, "influx.url is required")
 	}
-	if c.Influx.Org == "" {
-		errs = append(errs, "influx.org is required")
+	if c.Influx.Org == "" && c.Influx.OrgID == "" {
+		errs = append(errs, "influx.org or influx.org_id is required")
 	}
 	if c.Influx.Token == "" {
 		errs = append(errs, "influx.token is required (set INFLUX_TOKEN env var)")

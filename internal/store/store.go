@@ -61,10 +61,15 @@ type Store struct {
 
 func New(cfg config.InfluxConfig, stationID string, logger *zap.Logger) (*Store, error) {
 	client := influxdb2.NewClient(cfg.URL, cfg.Token)
+	// The write and query APIs accept either an org name or org ID.
+	orgRef := cfg.Org
+	if orgRef == "" {
+		orgRef = cfg.OrgID
+	}
 	return &Store{
 		client:     client,
-		writeAPI:   client.WriteAPIBlocking(cfg.Org, cfg.BucketRaw),
-		queryAPI:   client.QueryAPI(cfg.Org),
+		writeAPI:   client.WriteAPIBlocking(orgRef, cfg.BucketRaw),
+		queryAPI:   client.QueryAPI(orgRef),
 		tasksAPI:   client.TasksAPI(),
 		bucketsAPI: client.BucketsAPI(),
 		cfg:        cfg,
