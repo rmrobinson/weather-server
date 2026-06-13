@@ -183,10 +183,7 @@ func (i *Ingester) flush(gen uint64) {
 	// Derived fields — computed outside the lock.
 	r.DewPointC = dewPoint(r.TempC, r.HumidityPct)
 	r.FeelsLikeC = feelsLike(r.TempC, r.DewPointC, r.WindSpeedMs)
-	// Use wall-clock time for solar position: the sensor's timestamp may be
-	// local time parsed as UTC, which would shift the calculation by the UTC
-	// offset and produce wrong cloud cover / condition values.
-	clearSky := solar.ClearSkyGHI(i.lat, i.lon, time.Now().Unix())
+	clearSky := solar.ClearSkyGHI(i.lat, i.lon, r.Timestamp.Unix())
 	r.ClearSkyWm2 = clearSky
 	r.ClearSkyIdx, r.CloudCovPct = solar.CloudCover(r.SolarWm2, clearSky)
 	r.Condition = types.DeriveCondition(r)
