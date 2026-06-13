@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="weather"
-SERVICE_NAME="weather.service"
-USER_NAME="weather"
-GROUP_NAME="weather"
-INSTALL_DIR="/opt/weather"
-CONFIG_DIR="/etc/weather"
+APP_NAME="weatherd"
+SERVICE_NAME="weatherd.service"
+USER_NAME="weatherd"
+GROUP_NAME="weatherd"
+INSTALL_DIR="/opt/weatherd"
+CONFIG_DIR="/etc/weatherd"
 SYSTEMD_DIR="/etc/systemd/system"
 
 BUILD_BINARY=0
@@ -17,13 +17,13 @@ BINARY_SOURCE=""
 usage() {
   printf 'Usage: %s [--binary PATH | --build] [--no-start] [--overwrite-config]\n' "$0"
   printf '\n'
-  printf 'Installs the weather server as a systemd service running as weather:weather.\n'
+  printf 'Installs the weather server as a systemd service running as weatherd:weatherd.\n'
   printf '\n'
   printf 'Options:\n'
-  printf '  --binary PATH       Install this prebuilt binary as /opt/weather/weather.\n'
-  printf '  --build             Build ./cmd/weather with go and install the result.\n'
+  printf '  --binary PATH       Install this prebuilt binary as /opt/weatherd/weatherd.\n'
+  printf '  --build             Build ./cmd/weatherd with go and install the result.\n'
   printf '  --no-start          Install files but do not enable or restart the service.\n'
-  printf '  --overwrite-config  Replace /etc/weather/config.yaml with deploy/config.yaml.example.\n'
+  printf '  --overwrite-config  Replace /etc/weatherd/config.yaml with deploy/config.yaml.example.\n'
 }
 
 while [ "$#" -gt 0 ]; do
@@ -82,15 +82,15 @@ cleanup() {
 trap cleanup EXIT
 
 if [ "$BUILD_BINARY" -eq 1 ]; then
-  TMP_BINARY="$(mktemp "/tmp/weather.XXXXXX")"
+  TMP_BINARY="$(mktemp "/tmp/weatherd.XXXXXX")"
   echo "building $APP_NAME from $REPO_ROOT"
-  (cd "$REPO_ROOT" && go build -o "$TMP_BINARY" ./cmd/weather)
+  (cd "$REPO_ROOT" && go build -o "$TMP_BINARY" ./cmd/weatherd)
   BINARY_SOURCE="$TMP_BINARY"
 elif [ -z "$BINARY_SOURCE" ]; then
-  if [ -x "$REPO_ROOT/weather" ]; then
-    BINARY_SOURCE="$REPO_ROOT/weather"
+  if [ -x "$REPO_ROOT/weatherd" ]; then
+    BINARY_SOURCE="$REPO_ROOT/weatherd"
   else
-    echo "no binary found. Run 'go build -o weather ./cmd/weather' first, or use --build, or pass --binary PATH" >&2
+    echo "no binary found. Run 'go build -o weatherd ./cmd/weatherd' first, or use --build, or pass --binary PATH" >&2
     exit 1
   fi
 fi
@@ -125,11 +125,11 @@ else
   echo "preserving existing $CONFIG_DIR/config.yaml"
 fi
 
-if [ ! -f "$CONFIG_DIR/weather.env" ]; then
-  install -o root -g "$GROUP_NAME" -m 0640 "$SCRIPT_DIR/weather.env.example" "$CONFIG_DIR/weather.env"
-  echo "installed $CONFIG_DIR/weather.env — set INFLUX_TOKEN (and optionally WEATHER_PSK) before starting"
+if [ ! -f "$CONFIG_DIR/weatherd.env" ]; then
+  install -o root -g "$GROUP_NAME" -m 0640 "$SCRIPT_DIR/weatherd.env.example" "$CONFIG_DIR/weatherd.env"
+  echo "installed $CONFIG_DIR/weatherd.env — set INFLUX_TOKEN (and optionally WEATHER_PSK) before starting"
 else
-  echo "preserving existing $CONFIG_DIR/weather.env"
+  echo "preserving existing $CONFIG_DIR/weatherd.env"
 fi
 
 systemctl daemon-reload

@@ -2,8 +2,10 @@
 config.yaml
 
 # Build output
-/weather
 /weatherd
+
+# Editor swap files
+*.swp
 
 # macOS
 .DS_Store

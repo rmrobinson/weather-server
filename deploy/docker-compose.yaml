@@ -1,5 +1,5 @@
 services:
-  weather:
+  weatherd:
     build:
       context: ..
       dockerfile: deploy/Dockerfile

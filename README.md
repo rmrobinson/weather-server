@@ -74,13 +74,13 @@ influx auth create \
 
 ```bash
 export INFLUX_TOKEN='your-token-here'
-go run ./cmd/weather/ --config ./config.yaml
+go run ./cmd/weatherd/ --config ./config.yaml
 ```
 
 Or build first:
 
 ```bash
-go build -o weather ./cmd/weather/
+go build -o weather ./cmd/weatherd/
 INFLUX_TOKEN='your-token-here' ./weather --config ./config.yaml
 ```
 
