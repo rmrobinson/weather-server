@@ -1,0 +1,30 @@
+[Unit]
+Description=Weather Server daemon
+After=network.target
+Documentation=https://github.com/rmrobinson/weather-server
+
+[Service]
+Type=simple
+User=weatherd
+Group=weatherd
+WorkingDirectory=/etc/weatherd
+
+# Secrets and runtime config — create /etc/weatherd/environment and populate:
+#   INFLUX_TOKEN=<your-influxdb-api-token>
+#   WEATHER_PSK=<your-psk-or-leave-absent-to-disable-auth>
+EnvironmentFile=/etc/weatherd/environment
+
+ExecStart=/usr/local/bin/weatherd --config /etc/weatherd/config.yaml
+
+Restart=on-failure
+RestartSec=5
+
+# Harden the service
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=
+
+[Install]
+WantedBy=multi-user.target

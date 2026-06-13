@@ -3,9 +3,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o weather-server ./cmd/weather-server
+RUN CGO_ENABLED=0 go build -o weatherd ./cmd/weatherd
 
 FROM gcr.io/distroless/static-debian12
-COPY --from=builder /app/weather-server /weather-server
+COPY --from=builder /app/weatherd /weatherd
 # config.yaml is mounted at runtime via docker-compose volume — never bake it into the image.
-ENTRYPOINT ["/weather-server", "--config", "/config.yaml"]
+ENTRYPOINT ["/weatherd", "--config", "/config.yaml"]
