@@ -39,6 +39,10 @@ func main() {
 	}
 	defer logger.Sync()
 
+	if cfg.Latitude == 0 && cfg.Longitude == 0 {
+		logger.Warn("latitude and longitude are both 0.0 — solar/cloud/condition fields will be computed for the Gulf of Guinea; set real coordinates in config")
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 

@@ -2,8 +2,8 @@ package grpcserver
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -154,7 +154,12 @@ func pskCheck(psk string, md metadata.MD) error {
 		return nil
 	}
 	vals := md.Get("authorization")
-	if len(vals) == 0 || vals[0] != fmt.Sprintf("psk %s", psk) {
+	want := []byte("psk " + psk)
+	var got []byte
+	if len(vals) > 0 {
+		got = []byte(vals[0])
+	}
+	if subtle.ConstantTimeCompare(got, want) != 1 {
 		return status.Error(codes.Unauthenticated, "invalid PSK")
 	}
 	return nil

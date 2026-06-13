@@ -176,6 +176,10 @@ func (s *Store) ensureFluxTasks(ctx context.Context) error {
 		).Replace(string(data))
 		_, err = s.tasksAPI.CreateTaskWithEvery(ctx, taskName, script, every, orgID)
 		if err != nil {
+			// Tolerate a create-after-find race: verify the task exists now.
+			if tasks, verifyErr := s.tasksAPI.FindTasks(ctx, &api.TaskFilter{Name: taskName}); verifyErr == nil && len(tasks) > 0 {
+				return nil
+			}
 			return fmt.Errorf("create task %s: %w", taskName, err)
 		}
 		s.logger.Info("created flux task", zap.String("task", taskName))

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -266,7 +267,9 @@ func PSKMiddleware(psk string) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			if r.Header.Get("Authorization") != fmt.Sprintf("psk %s", psk) {
+			want := []byte("psk " + psk)
+			got := []byte(r.Header.Get("Authorization"))
+			if subtle.ConstantTimeCompare(got, want) != 1 {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}

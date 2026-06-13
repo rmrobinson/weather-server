@@ -275,7 +275,7 @@ func dewPoint(tempC, humidityPct float64) float64 {
 // feelsLike returns the apparent temperature (°C) using Environment Canada
 // formulas, mirroring the algorithm used by Ecowitt collectors.
 //
-//   - Wind chill (EC 2001): applied when T ≤ 10 °C and wind > 4.8 km/h.
+//   - Wind chill (EC 2001): applied when T ≤ 0 °C and wind > 4.8 km/h.
 //   - Humidex (EC):         applied when T ≥ 20 °C; vapour pressure derived
 //     from dew point via Magnus.
 //   - Otherwise: returns T unchanged.
