@@ -222,23 +222,23 @@ func applyField(r *types.WeatherReading, field, val string) error {
 		r.MaxDailyGustMs = f
 	case "windDir":
 		r.WindDirDeg = f
-	// Rain
+	// Rain — Ecowitt MQTT publishes all rain values in inches; convert to mm.
 	case "rainRealTime":
-		r.RainMmHr = f
+		r.RainMmHr = f * 25.4
 	case "rainEvent":
-		r.RainEventMm = f
+		r.RainEventMm = f * 25.4
 	case "rainHourly":
-		r.RainHourlyMm = f
+		r.RainHourlyMm = f * 25.4
 	case "rainDaily":
-		r.RainDailyMm = f
+		r.RainDailyMm = f * 25.4
 	case "rainWeekly":
-		r.RainWeeklyMm = f
+		r.RainWeeklyMm = f * 25.4
 	case "rainMonthly":
-		r.RainMonthlyMm = f
+		r.RainMonthlyMm = f * 25.4
 	case "rainSeason":
-		r.RainSeasonMm = f
+		r.RainSeasonMm = f * 25.4
 	case "rainYearly":
-		r.RainYearlyMm = f
+		r.RainYearlyMm = f * 25.4
 	// Solar / UV
 	case "uvIndex":
 		r.UVIndex = f
