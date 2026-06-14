@@ -122,7 +122,6 @@ type WeatherReading struct {
 	HumidityInPct  float64                `protobuf:"fixed64,18,opt,name=humidity_in_pct,json=humidityInPct,proto3" json:"humidity_in_pct,omitempty"`
 	MaxDailyGustMs float64                `protobuf:"fixed64,19,opt,name=max_daily_gust_ms,json=maxDailyGustMs,proto3" json:"max_daily_gust_ms,omitempty"`
 	RainHourlyMm   float64                `protobuf:"fixed64,20,opt,name=rain_hourly_mm,json=rainHourlyMm,proto3" json:"rain_hourly_mm,omitempty"`
-	RainSeasonMm   float64                `protobuf:"fixed64,21,opt,name=rain_season_mm,json=rainSeasonMm,proto3" json:"rain_season_mm,omitempty"`
 	BatteryV       float64                `protobuf:"fixed64,22,opt,name=battery_v,json=batteryV,proto3" json:"battery_v,omitempty"`
 	CapacitorV     float64                `protobuf:"fixed64,23,opt,name=capacitor_v,json=capacitorV,proto3" json:"capacitor_v,omitempty"`
 	// Derived atmospheric fields.
@@ -305,13 +304,6 @@ func (x *WeatherReading) GetMaxDailyGustMs() float64 {
 func (x *WeatherReading) GetRainHourlyMm() float64 {
 	if x != nil {
 		return x.RainHourlyMm
-	}
-	return 0
-}
-
-func (x *WeatherReading) GetRainSeasonMm() float64 {
-	if x != nil {
-		return x.RainSeasonMm
 	}
 	return 0
 }
@@ -528,7 +520,7 @@ var File_proto_weather_v1_weather_proto protoreflect.FileDescriptor
 const file_proto_weather_v1_weather_proto_rawDesc = "" +
 	"\n" +
 	"\x1eproto/weather/v1/weather.proto\x12\n" +
-	"weather.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb6\b\n" +
+	"weather.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa6\b\n" +
 	"\x0eWeatherReading\x128\n" +
 	"\ttimestamp\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x15\n" +
 	"\x06temp_c\x18\x02 \x01(\x01R\x05tempC\x12!\n" +
@@ -553,8 +545,7 @@ const file_proto_weather_v1_weather_proto_rawDesc = "" +
 	"\ttemp_in_c\x18\x11 \x01(\x01R\atempInC\x12&\n" +
 	"\x0fhumidity_in_pct\x18\x12 \x01(\x01R\rhumidityInPct\x12)\n" +
 	"\x11max_daily_gust_ms\x18\x13 \x01(\x01R\x0emaxDailyGustMs\x12$\n" +
-	"\x0erain_hourly_mm\x18\x14 \x01(\x01R\frainHourlyMm\x12$\n" +
-	"\x0erain_season_mm\x18\x15 \x01(\x01R\frainSeasonMm\x12\x1b\n" +
+	"\x0erain_hourly_mm\x18\x14 \x01(\x01R\frainHourlyMm\x12\x1b\n" +
 	"\tbattery_v\x18\x16 \x01(\x01R\bbatteryV\x12\x1f\n" +
 	"\vcapacitor_v\x18\x17 \x01(\x01R\n" +
 	"capacitorV\x12\x1e\n" +
@@ -564,7 +555,7 @@ const file_proto_weather_v1_weather_proto_rawDesc = "" +
 	"\x0fcloud_cover_pct\x18\x1a \x01(\x01R\rcloudCoverPct\x12 \n" +
 	"\ffeels_like_c\x18\x1d \x01(\x01R\n" +
 	"feelsLikeC\x12:\n" +
-	"\tcondition\x18\x1c \x01(\x0e2\x1c.weather.v1.WeatherConditionR\tcondition\"\x0f\n" +
+	"\tcondition\x18\x1c \x01(\x0e2\x1c.weather.v1.WeatherConditionR\tconditionJ\x04\b\x15\x10\x16R\x0erain_season_mm\"\x0f\n" +
 	"\rStreamRequest\"y\n" +
 	"\x17RainAccumulationRequest\x120\n" +
 	"\x05start\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x05start\x12,\n" +

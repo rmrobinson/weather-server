@@ -235,8 +235,6 @@ func applyField(r *types.WeatherReading, field, val string) error {
 		r.RainWeeklyMm = f * 25.4
 	case "rainMonthly":
 		r.RainMonthlyMm = f * 25.4
-	case "rainSeason":
-		r.RainSeasonMm = f * 25.4
 	case "rainYearly":
 		r.RainYearlyMm = f * 25.4
 	// Solar / UV

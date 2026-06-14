@@ -29,7 +29,7 @@ var validReadingFields = map[string]bool{
 	// Rain
 	"rain_mm_hr": true, "rain_event_mm": true, "rain_hourly_mm": true,
 	"rain_daily_mm": true, "rain_weekly_mm": true, "rain_monthly_mm": true,
-	"rain_season_mm": true, "rain_yearly_mm": true,
+	"rain_yearly_mm": true,
 	// Derived atmospheric
 	"dew_point_c": true, "feels_like_c": true,
 	// Solar / UV + derived cloud cover

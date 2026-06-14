@@ -30,7 +30,6 @@ type WeatherReading struct {
 	RainDailyMm   float64 `json:"rain_daily_mm"`
 	RainWeeklyMm  float64 `json:"rain_weekly_mm"`
 	RainMonthlyMm float64 `json:"rain_monthly_mm"`
-	RainSeasonMm  float64 `json:"rain_season_mm"`
 	RainYearlyMm  float64 `json:"rain_yearly_mm"`
 
 	// Derived atmospheric

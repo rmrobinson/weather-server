@@ -71,7 +71,6 @@ func toProto(r types.WeatherReading) *weatherv1.WeatherReading {
 		RainDailyMm:   r.RainDailyMm,
 		RainWeeklyMm:  r.RainWeeklyMm,
 		RainMonthlyMm: r.RainMonthlyMm,
-		RainSeasonMm:  r.RainSeasonMm,
 		RainYearlyMm:  r.RainYearlyMm,
 		// Derived atmospheric
 		DewPointC: r.DewPointC,

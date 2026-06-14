@@ -70,7 +70,6 @@ func TestApplyField_KnownFields(t *testing.T) {
 		"rainDaily":    "1.400",
 		"rainWeekly":   "5.600",
 		"rainMonthly":  "22.100",
-		"rainSeason":   "45.000",
 		"rainYearly":   "9.748",
 		// Solar / UV
 		"uvIndex":        "3",
@@ -101,7 +100,6 @@ func TestApplyField_KnownFields(t *testing.T) {
 	expectClose(t, "RainDailyMm", r.RainDailyMm, 1.4*25.4)
 	expectClose(t, "RainWeeklyMm", r.RainWeeklyMm, 5.6*25.4)
 	expectClose(t, "RainMonthlyMm", r.RainMonthlyMm, 22.1*25.4)
-	expectClose(t, "RainSeasonMm", r.RainSeasonMm, 45.0*25.4)
 	expectClose(t, "RainYearlyMm", r.RainYearlyMm, 9.748*25.4)
 	expectClose(t, "UVIndex", r.UVIndex, 3.0)
 	expectClose(t, "SolarWm2", r.SolarWm2, 76.24)

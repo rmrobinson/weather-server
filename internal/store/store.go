@@ -212,7 +212,6 @@ func (s *Store) WriteReading(ctx context.Context, r types.WeatherReading) error 
 			"rain_daily_mm":   r.RainDailyMm,
 			"rain_weekly_mm":  r.RainWeeklyMm,
 			"rain_monthly_mm": r.RainMonthlyMm,
-			"rain_season_mm":  r.RainSeasonMm,
 			"rain_yearly_mm":  r.RainYearlyMm,
 			// Derived atmospheric
 			"dew_point_c":  r.DewPointC,
@@ -452,7 +451,6 @@ func recordToReading(rec *query.FluxRecord) types.WeatherReading {
 		RainDailyMm:   getFloat("rain_daily_mm"),
 		RainWeeklyMm:  getFloat("rain_weekly_mm"),
 		RainMonthlyMm: getFloat("rain_monthly_mm"),
-		RainSeasonMm:  getFloat("rain_season_mm"),
 		RainYearlyMm:  getFloat("rain_yearly_mm"),
 		// Derived atmospheric
 		DewPointC:  getFloat("dew_point_c"),

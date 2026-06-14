@@ -42,7 +42,8 @@ message WeatherReading {
   double humidity_in_pct = 18;
   double max_daily_gust_ms = 19;
   double rain_hourly_mm = 20;
-  double rain_season_mm = 21;
+  reserved 21;
+  reserved "rain_season_mm";
   double battery_v = 22;
   double capacitor_v = 23;
   // Derived atmospheric fields.
