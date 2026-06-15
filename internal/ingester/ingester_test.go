@@ -30,11 +30,14 @@ func (m *fakeMsg) Ack()              {}
 
 func newTestIngester(prefix string) (*Ingester, *fakePublisher) {
 	pub := &fakePublisher{ch: make(chan types.WeatherReading, 8)}
-	ing := &Ingester{
-		cfg:    config.MQTTConfig{TopicPrefix: prefix},
-		hub:    pub,
-		logger: noopLogger(),
-	}
+	ing := New(
+		config.MQTTConfig{TopicPrefix: prefix},
+		config.EcowittConfig{}, // no REST UV fetch in tests
+		0, 0,
+		nil, // hub set below
+		noopLogger(),
+	)
+	ing.hub = pub
 	return ing, pub
 }
 

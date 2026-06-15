@@ -114,7 +114,6 @@
         <option value="rain_daily_mm">Rain Today (mm)</option>
         <option value="rain_weekly_mm">Rain This Week (mm)</option>
         <option value="rain_monthly_mm">Rain This Month (mm)</option>
-        <option value="rain_season_mm">Rain This Season (mm)</option>
         <option value="rain_yearly_mm">Rain Yearly (mm, cumulative)</option>
         <option value="uv_index">UV Index</option>
         <option value="solar_wm2">Solar (W/m²)</option>
@@ -143,7 +142,7 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   range: '1h',
-  field: 'temp_c',
+  field: document.getElementById('field-select').value,
   chartStart: null,
   chartEnd: null,
   healthStatus: {},

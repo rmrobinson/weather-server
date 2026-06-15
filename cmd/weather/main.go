@@ -75,7 +75,7 @@ func main() {
 		}
 	}()
 
-	ing := ingester.New(cfg.MQTT, cfg.Latitude, cfg.Longitude, h, logger)
+	ing := ingester.New(cfg.MQTT, cfg.Ecowitt, cfg.Latitude, cfg.Longitude, h, logger)
 	go ing.Run(ctx)
 
 	grpcSrv := grpcserver.NewGRPCServer(cfg.Auth.PSK)

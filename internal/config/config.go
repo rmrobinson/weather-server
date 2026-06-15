@@ -12,11 +12,16 @@ type Config struct {
 	StationID string  `yaml:"station_id"`
 	Latitude  float64 `yaml:"latitude"`
 	Longitude float64 `yaml:"longitude"`
-	MQTT      MQTTConfig   `yaml:"mqtt"`
-	Influx    InfluxConfig `yaml:"influx"`
-	GRPC      GRPCConfig   `yaml:"grpc"`
-	HTTP      HTTPConfig   `yaml:"http"`
-	Auth      AuthConfig   `yaml:"auth"`
+	MQTT      MQTTConfig    `yaml:"mqtt"`
+	Ecowitt   EcowittConfig `yaml:"ecowitt"`
+	Influx    InfluxConfig  `yaml:"influx"`
+	GRPC      GRPCConfig    `yaml:"grpc"`
+	HTTP      HTTPConfig    `yaml:"http"`
+	Auth      AuthConfig    `yaml:"auth"`
+}
+
+type EcowittConfig struct {
+	LocalAPIURL string `yaml:"local_api_url"` // e.g. "http://ecowitt.ktc1.net.faltung.ca"; empty disables REST UV fetch
 }
 
 type MQTTConfig struct {

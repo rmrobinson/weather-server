@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,11 +26,13 @@ type publisher interface {
 const debounceDelay = 2 * time.Second
 
 type Ingester struct {
-	hub    publisher
-	cfg    config.MQTTConfig
-	lat    float64
-	lon    float64
-	logger *zap.Logger
+	hub        publisher
+	cfg        config.MQTTConfig
+	lat        float64
+	lon        float64
+	logger     *zap.Logger
+	httpClient *http.Client
+	ecowittURL string // empty = REST UV fetch disabled
 
 	mu           sync.Mutex
 	lastReceived time.Time
@@ -39,8 +42,21 @@ type Ingester struct {
 	debounceGen  uint64 // incremented on each reset; stale timer callbacks are no-ops
 }
 
-func New(cfg config.MQTTConfig, lat, lon float64, h *hub.Hub, logger *zap.Logger) *Ingester {
-	return &Ingester{hub: h, cfg: cfg, lat: lat, lon: lon, logger: logger}
+func New(mqttCfg config.MQTTConfig, ecowittCfg config.EcowittConfig, lat, lon float64, h *hub.Hub, logger *zap.Logger) *Ingester {
+	if ecowittCfg.LocalAPIURL != "" {
+		logger.Info("ecowitt REST UV fetch enabled", zap.String("url", ecowittCfg.LocalAPIURL))
+	} else {
+		logger.Info("ecowitt REST UV fetch disabled (no local_api_url configured)")
+	}
+	return &Ingester{
+		hub:        h,
+		cfg:        mqttCfg,
+		lat:        lat,
+		lon:        lon,
+		logger:     logger,
+		httpClient: &http.Client{Timeout: 1 * time.Second},
+		ecowittURL: ecowittCfg.LocalAPIURL,
+	}
 }
 
 func (i *Ingester) LastReceived() time.Time {
@@ -187,6 +203,18 @@ func (i *Ingester) flush(gen uint64) {
 
 	// Drop fields whose values are physically implausible.
 	validateReading(&r, i.logger)
+
+	// Supplement UV index from the GW2000B local REST API (not published by the MQTT bridge).
+	if i.ecowittURL != "" {
+		uvCtx, uvCancel := context.WithTimeout(context.Background(), 1*time.Second)
+		if uv, ok := fetchUVIndex(uvCtx, i.httpClient, i.ecowittURL); ok && uv >= 0 && uv <= 20 {
+			r.UVIndex = uv
+			markReceived(&r, "uv_index")
+		} else {
+			i.logger.Debug("livedata UV fetch skipped or out of bounds")
+		}
+		uvCancel()
+	}
 
 	// Derived fields — computed outside the lock, guarded on received inputs.
 	if r.ReceivedFields["temp_c"] && r.ReceivedFields["humidity_pct"] {
