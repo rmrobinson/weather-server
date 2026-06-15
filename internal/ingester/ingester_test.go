@@ -222,6 +222,55 @@ func TestDebounce_SecondBurstProducesSecondReading(t *testing.T) {
 	}
 }
 
+func TestDebounce_TempRateOfChange_DropsSpike(t *testing.T) {
+	ing, pub := newTestIngester("ws90")
+
+	// First burst — establishes baseline at 14 °C.
+	send(ing, "time", "2026-06-15 01:12:00")
+	send(ing, "tempOutC", "14.0")
+	send(ing, "humidityOut", "81")
+	select {
+	case r := <-pub.ch:
+		if !r.ReceivedFields["temp_c"] {
+			t.Fatal("first burst: temp_c should be accepted")
+		}
+		expectClose(t, "first TempC", r.TempC, 14.0)
+	case <-time.After(debounceDelay + time.Second):
+		t.Fatal("timed out waiting for first reading")
+	}
+
+	// Second burst — WH90 sensor failure reports 0 °F (-17.8 °C), a 31.8 °C jump.
+	send(ing, "time", "2026-06-15 01:13:00")
+	send(ing, "tempOutC", "-17.8")
+	send(ing, "humidityOut", "0") // also invalid, will be dropped by bounds check
+	select {
+	case r := <-pub.ch:
+		if r.ReceivedFields["temp_c"] {
+			t.Errorf("spike reading: temp_c should have been dropped (got %.1f)", r.TempC)
+		}
+		if r.TempC != 0 {
+			t.Errorf("spike reading: TempC not zeroed (got %.1f)", r.TempC)
+		}
+	case <-time.After(debounceDelay + time.Second):
+		t.Fatal("timed out waiting for spike reading")
+	}
+
+	// Third burst — temperature returns to normal; last good value was 14 °C so
+	// 14.2 °C is a small delta and must be accepted.
+	send(ing, "time", "2026-06-15 01:16:00")
+	send(ing, "tempOutC", "14.2")
+	send(ing, "humidityOut", "80")
+	select {
+	case r := <-pub.ch:
+		if !r.ReceivedFields["temp_c"] {
+			t.Fatal("recovery burst: temp_c should be accepted")
+		}
+		expectClose(t, "recovery TempC", r.TempC, 14.2)
+	case <-time.After(debounceDelay + time.Second):
+		t.Fatal("timed out waiting for recovery reading")
+	}
+}
+
 func TestFeelsLike(t *testing.T) {
 	cases := []struct {
 		name          string

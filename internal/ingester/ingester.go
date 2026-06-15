@@ -40,6 +40,11 @@ type Ingester struct {
 	hasPending   bool
 	debounce     *time.Timer
 	debounceGen  uint64 // incremented on each reset; stale timer callbacks are no-ops
+
+	// Rate-of-change tracking for temperature. Only accessed inside flush(),
+	// which is serialised by debounceGen so no additional lock is needed.
+	lastTempC    float64
+	hasLastTempC bool
 }
 
 func New(mqttCfg config.MQTTConfig, ecowittCfg config.EcowittConfig, lat, lon float64, h *hub.Hub, logger *zap.Logger) *Ingester {
@@ -214,6 +219,22 @@ func (i *Ingester) flush(gen uint64) {
 			i.logger.Debug("livedata UV fetch skipped or out of bounds")
 		}
 		uvCancel()
+	}
+
+	// Rate-of-change check: a temperature jump > 15 °C in a single reading is
+	// physically impossible and indicates a sensor fault (e.g. WH90 reporting 0 °F floor).
+	if r.ReceivedFields["temp_c"] {
+		if i.hasLastTempC && math.Abs(r.TempC-i.lastTempC) > 15 {
+			i.logger.Warn("temperature rate-of-change exceeded threshold, dropping field",
+				zap.Float64("temp_c", r.TempC),
+				zap.Float64("last_temp_c", i.lastTempC),
+				zap.Float64("delta_c", math.Abs(r.TempC-i.lastTempC)))
+			delete(r.ReceivedFields, "temp_c")
+			r.TempC = 0
+		} else {
+			i.lastTempC = r.TempC
+			i.hasLastTempC = true
+		}
 	}
 
 	// Derived fields — computed outside the lock, guarded on received inputs.
