@@ -10,6 +10,12 @@ mqtt:
   topic_prefix: ws90
   client_id: weather-server
 
+# Optional. Fetches UV index from the GW2000B local REST API after each MQTT burst.
+# The ecowitt2mqtt MQTT bridge does not publish UV index; this supplements it.
+# Omit or leave local_api_url blank to disable.
+ecowitt:
+  local_api_url: "http://192.168.1.100"  # base URL of the GW2000B — no trailing slash
+
 influx:
   url: http://localhost:8086
   org: your-org-name
