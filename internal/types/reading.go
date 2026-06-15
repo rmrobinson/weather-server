@@ -49,4 +49,8 @@ type WeatherReading struct {
 	// Derived situational
 	Condition   string  `json:"condition"`    // DeriveCondition; never persisted to InfluxDB
 	FeelsLikeC  float64 `json:"feels_like_c"` // EC wind-chill / humidex; stored
+
+	// ReceivedFields holds the InfluxDB field names that were actually set in
+	// this reading. Only fields present here are written to the store.
+	ReceivedFields map[string]bool `json:"-"`
 }

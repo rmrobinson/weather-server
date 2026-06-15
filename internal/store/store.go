@@ -188,44 +188,50 @@ func (s *Store) ensureFluxTasks(ctx context.Context) error {
 }
 
 func (s *Store) WriteReading(ctx context.Context, r types.WeatherReading) error {
+	fields := make(map[string]any, len(r.ReceivedFields))
+	add := func(key string, val any) {
+		if r.ReceivedFields[key] { // nil-map read is safe; returns false
+			fields[key] = val
+		}
+	}
+	// Outdoor
+	add("temp_c", r.TempC)
+	add("humidity_pct", r.HumidityPct)
+	// Indoor
+	add("temp_in_c", r.TempInC)
+	add("humidity_in_pct", r.HumidityInPct)
+	// Pressure
+	add("pressure_hpa", r.PressureHPa)
+	add("pressure_abs_hpa", r.PressureAbsHPa)
+	// Wind
+	add("wind_speed_ms", r.WindSpeedMs)
+	add("wind_gust_ms", r.WindGustMs)
+	add("max_daily_gust_ms", r.MaxDailyGustMs)
+	add("wind_dir_deg", r.WindDirDeg)
+	// Rain
+	add("rain_mm_hr", r.RainMmHr)
+	add("rain_event_mm", r.RainEventMm)
+	add("rain_hourly_mm", r.RainHourlyMm)
+	add("rain_daily_mm", r.RainDailyMm)
+	add("rain_weekly_mm", r.RainWeeklyMm)
+	add("rain_monthly_mm", r.RainMonthlyMm)
+	add("rain_yearly_mm", r.RainYearlyMm)
+	// Derived atmospheric
+	add("dew_point_c", r.DewPointC)
+	add("feels_like_c", r.FeelsLikeC)
+	// Solar / UV
+	add("uv_index", r.UVIndex)
+	add("solar_wm2", r.SolarWm2)
+	add("clear_sky_wm2", r.ClearSkyWm2)
+	add("clear_sky_index", r.ClearSkyIdx)
+	add("cloud_cover_pct", r.CloudCovPct)
+	// Sensor health
+	add("battery_v", r.BatteryV)
+	add("capacitor_v", r.CapacitorV)
+
 	p := write.NewPoint("weather",
 		map[string]string{"station": s.stationID},
-		map[string]any{
-			// Outdoor
-			"temp_c":       r.TempC,
-			"humidity_pct": r.HumidityPct,
-			// Indoor
-			"temp_in_c":       r.TempInC,
-			"humidity_in_pct": r.HumidityInPct,
-			// Pressure
-			"pressure_hpa":     r.PressureHPa,
-			"pressure_abs_hpa": r.PressureAbsHPa,
-			// Wind
-			"wind_speed_ms":    r.WindSpeedMs,
-			"wind_gust_ms":     r.WindGustMs,
-			"max_daily_gust_ms": r.MaxDailyGustMs,
-			"wind_dir_deg":     r.WindDirDeg,
-			// Rain
-			"rain_mm_hr":      r.RainMmHr,
-			"rain_event_mm":   r.RainEventMm,
-			"rain_hourly_mm":  r.RainHourlyMm,
-			"rain_daily_mm":   r.RainDailyMm,
-			"rain_weekly_mm":  r.RainWeeklyMm,
-			"rain_monthly_mm": r.RainMonthlyMm,
-			"rain_yearly_mm":  r.RainYearlyMm,
-			// Derived atmospheric
-			"dew_point_c":  r.DewPointC,
-			"feels_like_c": r.FeelsLikeC,
-			// Solar / UV
-			"uv_index":    r.UVIndex,
-			"solar_wm2":       r.SolarWm2,
-			"clear_sky_wm2":   r.ClearSkyWm2,
-			"clear_sky_index": r.ClearSkyIdx,
-			"cloud_cover_pct": r.CloudCovPct,
-			// Sensor health
-			"battery_v":   r.BatteryV,
-			"capacitor_v": r.CapacitorV,
-		},
+		fields,
 		r.Timestamp,
 	)
 	err := s.writeAPI.WritePoint(ctx, p)

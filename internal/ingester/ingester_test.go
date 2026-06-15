@@ -48,42 +48,53 @@ func send(ing *Ingester, field, val string) {
 
 func TestApplyField_KnownFields(t *testing.T) {
 	r := &types.WeatherReading{}
-	fields := map[string]string{
+	mqttToStorage := map[string]string{
 		// Outdoor
-		"tempOutC":    "24.0",
-		"humidityOut": "53",
+		"tempOutC":    "temp_c",
+		"humidityOut": "humidity_pct",
 		// Indoor
-		"tempInC":    "26.4",
-		"humidityIn": "49",
+		"tempInC":    "temp_in_c",
+		"humidityIn": "humidity_in_pct",
 		// Pressure
-		"baromRelHpa": "971.6",
-		"baromAbsHpa": "971.5",
+		"baromRelHpa": "pressure_hpa",
+		"baromAbsHpa": "pressure_abs_hpa",
 		// Wind
-		"windSpdMps":      "1.4",
-		"windGustMps":     "2.8",
-		"maxDailyGustMps": "7.6",
-		"windDir":         "266",
+		"windSpdMps":      "wind_speed_ms",
+		"windGustMps":     "wind_gust_ms",
+		"maxDailyGustMps": "max_daily_gust_ms",
+		"windDir":         "wind_dir_deg",
 		// Rain
-		"rainRealTime": "0.500",
-		"rainEvent":    "3.200",
-		"rainHourly":   "0.800",
-		"rainDaily":    "1.400",
-		"rainWeekly":   "5.600",
-		"rainMonthly":  "22.100",
-		"rainYearly":   "9.748",
+		"rainRealTime": "rain_mm_hr",
+		"rainEvent":    "rain_event_mm",
+		"rainHourly":   "rain_hourly_mm",
+		"rainDaily":    "rain_daily_mm",
+		"rainWeekly":   "rain_weekly_mm",
+		"rainMonthly":  "rain_monthly_mm",
+		"rainYearly":   "rain_yearly_mm",
 		// Solar / UV
-		"uvIndex":        "3",
-		"solarRadiation": "76.24",
+		"uvIndex":        "uv_index",
+		"solarRadiation": "solar_wm2",
 		// Sensor health
-		"wh90Battery": "3.28",
-		"capacVolt":   "5.30",
+		"wh90Battery": "battery_v",
+		"capacVolt":   "capacitor_v",
 	}
-	for f, v := range fields {
+	values := map[string]string{
+		"tempOutC": "24.0", "humidityOut": "53",
+		"tempInC": "26.4", "humidityIn": "49",
+		"baromRelHpa": "971.6", "baromAbsHpa": "971.5",
+		"windSpdMps": "1.4", "windGustMps": "2.8", "maxDailyGustMps": "7.6", "windDir": "266",
+		"rainRealTime": "0.500", "rainEvent": "3.200", "rainHourly": "0.800",
+		"rainDaily": "1.400", "rainWeekly": "5.600", "rainMonthly": "22.100", "rainYearly": "9.748",
+		"uvIndex": "3", "solarRadiation": "76.24",
+		"wh90Battery": "3.28", "capacVolt": "5.30",
+	}
+	for f, v := range values {
 		if err := applyField(r, f, v); err != nil {
 			t.Errorf("applyField(%q, %q): unexpected error: %v", f, v, err)
 		}
 	}
 
+	// Value assertions.
 	expectClose(t, "TempC", r.TempC, 24.0)
 	expectClose(t, "HumidityPct", r.HumidityPct, 53.0)
 	expectClose(t, "TempInC", r.TempInC, 26.4)
@@ -105,6 +116,29 @@ func TestApplyField_KnownFields(t *testing.T) {
 	expectClose(t, "SolarWm2", r.SolarWm2, 76.24)
 	expectClose(t, "BatteryV", r.BatteryV, 3.28)
 	expectClose(t, "CapacitorV", r.CapacitorV, 5.30)
+
+	// ReceivedFields assertions: every MQTT field must be marked with its storage key.
+	if r.ReceivedFields == nil {
+		t.Fatal("ReceivedFields is nil after applying all known fields")
+	}
+	for mqtt, storage := range mqttToStorage {
+		if !r.ReceivedFields[storage] {
+			t.Errorf("ReceivedFields missing %q (from MQTT field %q)", storage, mqtt)
+		}
+	}
+	// No unexpected extra keys.
+	for key := range r.ReceivedFields {
+		found := false
+		for _, v := range mqttToStorage {
+			if v == key {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("ReceivedFields contains unexpected key %q", key)
+		}
+	}
 }
 
 func TestApplyField_UnknownField_ReturnsError(t *testing.T) {
@@ -143,6 +177,15 @@ func TestDebounce_EmitsAfterBurst(t *testing.T) {
 		if r.Timestamp.IsZero() {
 			t.Error("Timestamp should not be zero")
 		}
+		if r.ReceivedFields == nil {
+			t.Error("ReceivedFields is nil")
+		} else {
+			for _, key := range []string{"temp_c", "humidity_pct", "pressure_hpa", "dew_point_c"} {
+				if !r.ReceivedFields[key] {
+					t.Errorf("ReceivedFields missing %q", key)
+				}
+			}
+		}
 	case <-time.After(debounceDelay + time.Second):
 		t.Fatal("timed out waiting for debounced reading")
 	}
@@ -168,6 +211,9 @@ func TestDebounce_SecondBurstProducesSecondReading(t *testing.T) {
 	select {
 	case r := <-pub.ch:
 		expectClose(t, "TempC from second burst", r.TempC, 21.0)
+		if r.ReceivedFields == nil || !r.ReceivedFields["temp_c"] {
+			t.Error("second burst: ReceivedFields missing temp_c")
+		}
 	case <-time.After(debounceDelay + time.Second):
 		t.Fatal("timed out waiting for second reading")
 	}

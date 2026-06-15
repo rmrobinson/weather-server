@@ -180,18 +180,71 @@ func (i *Ingester) flush(gen uint64) {
 	i.hasPending = false
 	i.mu.Unlock()
 
-	// Derived fields — computed outside the lock.
-	r.DewPointC = dewPoint(r.TempC, r.HumidityPct)
-	r.FeelsLikeC = feelsLike(r.TempC, r.DewPointC, r.WindSpeedMs)
+	// Log any expected fields that didn't arrive in this burst.
+	if missing := missingFields(r); len(missing) > 0 {
+		i.logger.Debug("incomplete burst: missing fields", zap.Strings("fields", missing))
+	}
+
+	// Drop fields whose values are physically implausible.
+	validateReading(&r, i.logger)
+
+	// Derived fields — computed outside the lock, guarded on received inputs.
+	if r.ReceivedFields["temp_c"] && r.ReceivedFields["humidity_pct"] {
+		r.DewPointC = dewPoint(r.TempC, r.HumidityPct)
+		markReceived(&r, "dew_point_c")
+	}
+	if r.ReceivedFields["temp_c"] {
+		r.FeelsLikeC = feelsLike(r.TempC, r.DewPointC, r.WindSpeedMs)
+		markReceived(&r, "feels_like_c")
+	}
+	// clear_sky_wm2 is always deterministic from lat/lon/time.
 	clearSky := solar.ClearSkyGHI(i.lat, i.lon, r.Timestamp.Unix())
 	r.ClearSkyWm2 = clearSky
-	r.ClearSkyIdx, r.CloudCovPct = solar.CloudCover(r.SolarWm2, clearSky)
-	r.Condition = types.DeriveCondition(r)
+	markReceived(&r, "clear_sky_wm2")
+	if r.ReceivedFields["solar_wm2"] {
+		r.ClearSkyIdx, r.CloudCovPct = solar.CloudCover(r.SolarWm2, clearSky)
+		markReceived(&r, "clear_sky_index")
+		markReceived(&r, "cloud_cover_pct")
+	}
+	r.Condition = types.DeriveCondition(r) // never stored
 
 	i.hub.Publish(r)
 }
 
-// applyField sets the WeatherReading field corresponding to the topic suffix.
+// expectedFields is the set of storage field names a healthy complete burst
+// should contain. Used by missingFields to identify incomplete readings.
+var expectedFields = []string{
+	"temp_c", "humidity_pct",
+	"temp_in_c", "humidity_in_pct",
+	"pressure_hpa", "pressure_abs_hpa",
+	"wind_speed_ms", "wind_gust_ms", "max_daily_gust_ms", "wind_dir_deg",
+	"rain_mm_hr", "rain_event_mm", "rain_hourly_mm", "rain_daily_mm",
+	"rain_weekly_mm", "rain_monthly_mm", "rain_yearly_mm",
+	"uv_index", "solar_wm2",
+	"battery_v", "capacitor_v",
+}
+
+// markReceived records that key was received in r, initialising the map if needed.
+func markReceived(r *types.WeatherReading, key string) {
+	if r.ReceivedFields == nil {
+		r.ReceivedFields = make(map[string]bool)
+	}
+	r.ReceivedFields[key] = true
+}
+
+// missingFields returns the expected field names absent from r.ReceivedFields.
+func missingFields(r types.WeatherReading) []string {
+	var out []string
+	for _, f := range expectedFields {
+		if !r.ReceivedFields[f] {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// applyField sets the WeatherReading field corresponding to the topic suffix
+// and marks it as received.
 func applyField(r *types.WeatherReading, field, val string) error {
 	f, err := parseFloat(val)
 	if err != nil {
@@ -201,52 +254,73 @@ func applyField(r *types.WeatherReading, field, val string) error {
 	// Outdoor
 	case "tempOutC":
 		r.TempC = f
+		markReceived(r, "temp_c")
 	case "humidityOut":
 		r.HumidityPct = f
+		markReceived(r, "humidity_pct")
 	// Indoor
 	case "tempInC":
 		r.TempInC = f
+		markReceived(r, "temp_in_c")
 	case "humidityIn":
 		r.HumidityInPct = f
+		markReceived(r, "humidity_in_pct")
 	// Pressure
 	case "baromRelHpa":
 		r.PressureHPa = f
+		markReceived(r, "pressure_hpa")
 	case "baromAbsHpa":
 		r.PressureAbsHPa = f
+		markReceived(r, "pressure_abs_hpa")
 	// Wind
 	case "windSpdMps":
 		r.WindSpeedMs = f
+		markReceived(r, "wind_speed_ms")
 	case "windGustMps":
 		r.WindGustMs = f
+		markReceived(r, "wind_gust_ms")
 	case "maxDailyGustMps":
 		r.MaxDailyGustMs = f
+		markReceived(r, "max_daily_gust_ms")
 	case "windDir":
 		r.WindDirDeg = f
+		markReceived(r, "wind_dir_deg")
 	// Rain — Ecowitt MQTT publishes all rain values in inches; convert to mm.
 	case "rainRealTime":
 		r.RainMmHr = f * 25.4
+		markReceived(r, "rain_mm_hr")
 	case "rainEvent":
 		r.RainEventMm = f * 25.4
+		markReceived(r, "rain_event_mm")
 	case "rainHourly":
 		r.RainHourlyMm = f * 25.4
+		markReceived(r, "rain_hourly_mm")
 	case "rainDaily":
 		r.RainDailyMm = f * 25.4
+		markReceived(r, "rain_daily_mm")
 	case "rainWeekly":
 		r.RainWeeklyMm = f * 25.4
+		markReceived(r, "rain_weekly_mm")
 	case "rainMonthly":
 		r.RainMonthlyMm = f * 25.4
+		markReceived(r, "rain_monthly_mm")
 	case "rainYearly":
 		r.RainYearlyMm = f * 25.4
+		markReceived(r, "rain_yearly_mm")
 	// Solar / UV
 	case "uvIndex":
 		r.UVIndex = f
+		markReceived(r, "uv_index")
 	case "solarRadiation":
 		r.SolarWm2 = f
+		markReceived(r, "solar_wm2")
 	// Sensor health
 	case "wh90Battery":
 		r.BatteryV = f
+		markReceived(r, "battery_v")
 	case "capacVolt":
 		r.CapacitorV = f
+		markReceived(r, "capacitor_v")
 	default:
 		return fmt.Errorf("unknown field %q", field)
 	}
