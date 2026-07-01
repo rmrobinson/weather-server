@@ -43,8 +43,9 @@ type Ingester struct {
 
 	// Rate-of-change tracking for temperature. Only accessed inside flush(),
 	// which is serialised by debounceGen so no additional lock is needed.
-	lastTempC    float64
-	hasLastTempC bool
+	lastTempC      float64
+	hasLastTempC   bool
+	tempDropStreak int // consecutive readings dropped due to rate-of-change
 }
 
 func New(mqttCfg config.MQTTConfig, ecowittCfg config.EcowittConfig, lat, lon float64, h *hub.Hub, logger *zap.Logger) *Ingester {
@@ -223,17 +224,30 @@ func (i *Ingester) flush(gen uint64) {
 
 	// Rate-of-change check: a temperature jump > 15 °C in a single reading is
 	// physically impossible and indicates a sensor fault (e.g. WH90 reporting 0 °F floor).
+	// Rate-of-change guard: a jump > 15 °C in one reading is physically impossible
+	// and indicates a sensor fault (e.g. WH90 reporting the 0 °F floor).
+	// The drop streak allows multiple consecutive spikes from a good baseline to be
+	// suppressed without resetting it. After 5 consecutive drops we assume the
+	// baseline itself is wrong (e.g. a glitch was the first post-restart reading)
+	// and reset so the next reading is accepted unconditionally.
 	if r.ReceivedFields["temp_c"] {
 		if i.hasLastTempC && math.Abs(r.TempC-i.lastTempC) > 15 {
+			i.tempDropStreak++
 			i.logger.Warn("temperature rate-of-change exceeded threshold, dropping field",
 				zap.Float64("temp_c", r.TempC),
 				zap.Float64("last_temp_c", i.lastTempC),
-				zap.Float64("delta_c", math.Abs(r.TempC-i.lastTempC)))
+				zap.Float64("delta_c", math.Abs(r.TempC-i.lastTempC)),
+				zap.Int("drop_streak", i.tempDropStreak))
 			delete(r.ReceivedFields, "temp_c")
 			r.TempC = 0
+			if i.tempDropStreak >= 5 {
+				i.hasLastTempC = false
+				i.tempDropStreak = 0
+			}
 		} else {
 			i.lastTempC = r.TempC
 			i.hasLastTempC = true
+			i.tempDropStreak = 0
 		}
 	}
 

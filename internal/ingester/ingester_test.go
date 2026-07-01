@@ -255,15 +255,16 @@ func TestDebounce_TempRateOfChange_DropsSpike(t *testing.T) {
 		t.Fatal("timed out waiting for spike reading")
 	}
 
-	// Third burst — temperature returns to normal; last good value was 14 °C so
-	// 14.2 °C is a small delta and must be accepted.
+	// Third burst — temperature returns to normal. The baseline was preserved
+	// (single drop does not reset it), so 14.2 °C is within 15 °C of 14.0 °C
+	// and must be accepted immediately.
 	send(ing, "time", "2026-06-15 01:16:00")
 	send(ing, "tempOutC", "14.2")
 	send(ing, "humidityOut", "80")
 	select {
 	case r := <-pub.ch:
 		if !r.ReceivedFields["temp_c"] {
-			t.Fatal("recovery burst: temp_c should be accepted")
+			t.Fatal("recovery burst: temp_c should be accepted (baseline preserved across single drop)")
 		}
 		expectClose(t, "recovery TempC", r.TempC, 14.2)
 	case <-time.After(debounceDelay + time.Second):
