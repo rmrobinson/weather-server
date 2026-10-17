@@ -218,6 +218,21 @@ sudo editor /etc/weatherd/weatherd.env
 sudo systemctl enable --now weatherd
 ```
 
+### Updating from your own machine
+
+`~/bin/build-and-deploy-service` (not part of this repo) rsyncs this repo to a
+remote host, builds it there natively, installs the binary to
+`/opt/weatherd/weatherd`, and restarts the service. Run it from the repository
+root; `--cmd weather` is needed because the binary/unit is named `weatherd` but
+the command lives in `cmd/weather`:
+
+```bash
+SERVICE_DEPLOY_HOST=your.host build-and-deploy-service --cmd weather weatherd
+```
+
+This only updates an already-installed service (via `install.sh`, above) — it
+doesn't create the user, directories, config, or the unit file.
+
 ## Docker
 
 Docker files live in `deploy/`. Run from that directory:
